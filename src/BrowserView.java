@@ -1,4 +1,7 @@
 import java.awt.Dimension;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.lang.reflect.Type;
 import java.net.URL;
 import java.util.Optional;
 import java.util.ResourceBundle;
@@ -201,17 +204,12 @@ public class BrowserView {
         HBox result = new HBox();
         // create buttons, with their associated actions
         // old style way to do set up callback (anonymous class)
-        myBackButton = makeButton("BackCommand", new EventHandler<ActionEvent>() {
-            @Override      
-            public void handle (ActionEvent event) {       
-                back();        
-            }      
-        });
+        myBackButton = makeButton("BackCommand", "back");
         result.getChildren().add(myBackButton);
         // new style way to do set up callback (lambdas)
-        myNextButton = makeButton("NextCommand", event -> next());
+        myNextButton = makeButton("NextCommand", "next");
         result.getChildren().add(myNextButton);
-        myHomeButton = makeButton("HomeCommand", event -> home());
+        myHomeButton = makeButton("HomeCommand", "home");
         result.getChildren().add(myHomeButton);
         // if user presses button or enter in text field, load/show the URL
         EventHandler<ActionEvent> showHandler = new ShowPage();
@@ -226,15 +224,21 @@ public class BrowserView {
         HBox result = new HBox();
         myFavorites = new ComboBox<String>();
         // ADD REST OF CODE HERE
-        result.getChildren().add(makeButton("SetHomeCommand", event -> {
-            myModel.setHome();
-            enableButtons();
-        }));
-        return result;
+        result.getChildren().add(makeButton("SetHomeCommand", "setHomeEnable"));
+		return result;
+    }
+    
+    private void setHomeEnable() {
+    	myModel.setHome();
+        enableButtons();
+    }
+    
+    private Button makeButton (String property, EventHandler<ActionEvent> handler) {
+    	
     }
 
     // makes a button using either an image or a label
-    private Button makeButton (String property, EventHandler<ActionEvent> handler) {
+    private Button makeButton (String property, String reflectionString) {
         // represent all supported image suffixes
         final String IMAGEFILE_SUFFIXES = 
             String.format(".*\\.(%s)", String.join("|", ImageIO.getReaderFileSuffixes()));
@@ -247,8 +251,44 @@ public class BrowserView {
         } else {
             result.setText(label);
         }
-        result.setOnAction(handler);
-        return result;
+        
+        
+        
+        Method[] methods = this.getClass().getMethods();
+        Method handler = null;
+        for(Method method : methods) {
+        	if(method.getName() == reflectionString) {
+        		handler = method;
+        		Type[] types = handler.getGenericParameterTypes();
+        	}
+        	
+        }
+        
+        Class c = this.getClass();
+        
+        Class[] noparams = {};
+       
+		
+			result.setOnAction(e -> { try {
+				Object o = null;
+		        try {
+					o = c.newInstance();
+				} catch (InstantiationException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				} catch (IllegalAccessException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
+				
+				c.getDeclaredMethod(reflectionString, noparams).invoke(o, noparams);
+				
+			} catch (Exception e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}
+			});
+		return result;
     }
 
     // make text field for input
